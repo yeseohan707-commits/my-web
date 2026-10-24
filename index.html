@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나를 소개합니다</title>
+    <style>
+        /* CSS Reset 및 기본 스타일 설정 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            /* 둥글고 손글씨 감성이 느껴지는 시스템 및 기본 폰트 스택 적용 */
+            font-family: "Gowun Dodum", "고운돋움", "Cafe24 Simplehae", "카페24 심플해", "KyoboHandwriting2019", "Nanum Pen Script", "Nanum Square Round", "NanumRound", "Apple SD Gothic Neo", sans-serif;
+            background-color: #F0F7FF; /* 은은하고 맑은 하늘색 배경 */
+            color: #334155;
+            line-height: 1.6;
+            padding: 32px 16px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            letter-spacing: -0.01em;
+        }
+
+        /* 메인 컨테이너 */
+        .container {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* 헤더 섹션 */
+        header {
+            text-align: center;
+            padding: 36px 20px 28px;
+            background-color: #FFFFFF;
+            border-radius: 24px;
+            box-shadow: 0 4px 20px rgba(56, 189, 248, 0.08);
+            margin-bottom: 32px;
+            border: 1px solid #E0F2FE;
+            position: relative;
+        }
+
+        .profile-badge {
+            display: inline-block;
+            background-color: #E0F2FE;
+            color: #0284C7;
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+        }
+
+        .nickname {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #0284C7; /* 밝고 세련된 메인 하늘색 */
+            margin-bottom: 8px;
+            word-break: keep-all;
+        }
+
+        .tagline {
+            font-size: 0.95rem;
+            color: #64748B;
+            word-break: keep-all;
+        }
+
+        /* 그리드 컨테이너: 가로 3개, 세로 2개 (총 6개) */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        /* 카드 공통 스타일 */
+        .card {
+            background-color: #FFFFFF;
+            border-radius: 20px;
+            padding: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(186, 230, 253, 0.18);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            user-select: none; /* 클릭 시 텍스트 드래그 방지 */
+            border: 1px solid #E0F2FE;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(56, 189, 248, 0.22);
+            border-color: #7DD3FC;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0F172A;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* 열림/닫힘 화살표 아이콘 */
+        .arrow-icon {
+            font-size: 0.8rem;
+            color: #38BDF8;
+            transition: transform 0.3s ease;
+            background-color: #F0F9FF;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* 카드 열림 상태에서의 화살표 회전 및 효과 */
+        .card.active {
+            background-color: #FAFDFF;
+            border-color: #38BDF8;
+        }
+
+        .card.active .arrow-icon {
+            transform: rotate(180deg);
+            background-color: #E0F2FE;
+        }
+
+        /* 접히고 펼쳐지는 내용 구역 */
+        .card-content {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease, opacity 0.3s ease, margin-top 0.3s ease;
+            color: #475569;
+            font-size: 0.92rem;
+            line-height: 1.65;
+        }
+
+        /* 핵심 단어 강조 스타일 */
+        .card-content strong {
+            color: #0284C7;
+            font-weight: 700;
+        }
+
+        /* 활성화되었을 때 슬라이드 효과 */
+        .card.active .card-content {
+            max-height: 220px; /* 콘텐츠 길이에 맞춰 충분한 높이 지정 */
+            opacity: 1;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px dashed #BAE6FD;
+        }
+
+        /* 하단 카피라이트 */
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 0.8rem;
+            color: #94A3B8;
+        }
+
+        /* 태블릿 화면 반응형 (2열 배열) */
+        @media (max-width: 768px) {
+            .cards-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* 모바일 최적화 미디어 쿼리 (1열 배열) */
+        @media (max-width: 520px) {
+            body {
+                padding: 20px 12px;
+            }
+
+            .container {
+                max-width: 100%;
+            }
+
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nickname {
+                font-size: 1.5rem;
+            }
+
+            .tagline {
+                font-size: 0.88rem;
+            }
+
+            .card {
+                padding: 16px;
+            }
+
+            .card-title {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 상단 프로필 헤더 -->
+        <header>
+            <span class="profile-badge">MY STORY</span>
+            <h1 class="nickname">🌱 느긋한 탐험가</h1>
+            <p class="tagline">새로운 기술과 일상의 작은 즐거움을 찾아 나아가는 중이야.</p>
+        </header>
+
+        <!-- 3x2 그리드 카드리스트 -->
+        <main class="cards-grid">
+            <!-- 카드 1: 좋아하는 것 -->
+            <div class="card" onclick="toggleCard(this)">
+                <div class="card-header">
+                    <h2 class="card-title">❤️ 좋아하는 것</h2>
+                    <span class="arrow-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <strong>조용하고 차분한 분위기</strong> 속에서 <strong>감미로운 음악</strong>을 듣는 걸 정말 좋아해. 느긋하게 나만의 시간을 보낼 때 제일 행복해!
+                </div>
+            </div>
+
+            <!-- 카드 2: 요즘 관심사 -->
+            <div class="card" onclick="toggleCard(this)">
+                <div class="card-header">
+                    <h2 class="card-title">💡 요즘 관심사</h2>
+                    <span class="arrow-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <strong>케이팝 아이돌</strong> 무대랑 노래 찾아보는 재미에 푹 빠졌어! 그리고 보고 있으면 무조건 힐링되는 귀여운 <strong>치이카와 애니메이션</strong>도 엄청 즐겨봐.
+                </div>
+            </div>
+
+            <!-- 카드 3: 나의 소소한 장점 -->
+            <div class="card" onclick="toggleCard(this)">
+                <div class="card-header">
+                    <h2 class="card-title">✨ 나의 소소한 장점</h2>
+                    <span class="arrow-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    남의 이야기를 <strong>따뜻하고 차분하게 잘 들어줘.</strong> 그리고 일상 속에서 그냥 지나칠 수 있는 작고 귀여운 <strong>소소한 행복</strong>을 되게 잘 찾아내!
+                </div>
+            </div>
+
+            <!-- 카드 4: 나를 표현하자면 -->
+            <div class="card" onclick="toggleCard(this)">
+                <div class="card-header">
+                    <h2 class="card-title">💬 나를 표현하자면</h2>
+                    <span class="arrow-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    한 마디로 <strong>'차분한 산책자'</strong>랄까? 사람들의 진심 어린 이야기를 따뜻하게 흡수하면서, 나만의 <strong>느긋한 속도</strong>로 세상을 탐험하고 있어.
+                </div>
+            </div>
+
+            <!-- 카드 5: 나의 힐링 플레이리스트 -->
+            <div class="card" onclick="toggleCard(this)">
+                <div class="card-header">
+                    <h2 class="card-title">🎧 힐링 플레이리스트</h2>
+                    <span class="arrow-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    마음이 편안해지는 <strong>감성적인 발라드</strong> 곡들을 자주 들어. 잔잔한 멜로디와 가사에 집중하면서 조용히 귀를 기울이면 마음이 푹 쉬는 기분이야.
+                </div>
+            </div>
+
+            <!-- 카드 6: 나만의 충전 방식 -->
+            <div class="card" onclick="toggleCard(this)">
+                <div class="card-header">
+                    <h2 class="card-title">🔋 나만의 충전 방식</h2>
+                    <span class="arrow-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    방 안 조명을 살짝 은은하게 낮추고, <strong>좋아하는 캐릭터 영상</strong>이나 <strong>따뜻한 음료</strong> 한 잔이랑 함께 혼자만의 휴식을 즐기는 거야!
+                </div>
+            </div>
+        </main>
+
+        <!-- 푸터 -->
+        <footer>
+            <p>© 2026. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        /**
+         * 카드를 클릭했을 때 열림/닫힘 상태를 토글하는 함수
+         * @param {HTMLElement} element - 클릭된 카드 엘리먼트
+         */
+        function toggleCard(element) {
+            // 현재 클릭한 카드의 active 클래스 토글
+            element.classList.toggle('active');
+        }
+    </script>
+</body>
+</html>
