@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘 할 일</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Pretendard', sans-serif;
+        }
+        .transition-all {
+            transition: all 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen py-8 px-4 flex flex-col justify-between items-center bg-sky-50/50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-200">
+
+    <!-- 메인 컨테이너 -->
+    <div class="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-xl p-6 md:p-8 flex flex-col gap-6 border border-sky-100/80 dark:border-slate-700">
+        
+        <!-- 헤더 및 오늘 날짜, 다크모드/콤팩트 모드 토글 -->
+        <header class="flex justify-between items-center">
+            <div class="flex flex-col gap-1">
+                <h1 class="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">오늘 할 일 📝</h1>
+                <p id="current-date" class="text-slate-500 dark:text-slate-400 font-medium text-sm"></p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="compact-mode-btn" title="콤팩트 모드 전환" class="w-10 h-10 rounded-xl bg-sky-50 dark:bg-slate-700 flex items-center justify-center text-sky-600 dark:text-slate-300 hover:scale-105 active:scale-95 transition-all cursor-pointer text-sm font-bold">
+                    📐
+                </button>
+                <button id="dark-mode-btn" title="다크모드 전환" class="w-10 h-10 rounded-xl bg-sky-50 dark:bg-slate-700 flex items-center justify-center text-sky-600 dark:text-slate-300 hover:scale-105 active:scale-95 transition-all cursor-pointer">
+                    🌙
+                </button>
+            </div>
+        </header>
+
+        <!-- 디데이(D-Day) 위젯 섹션 -->
+        <section class="bg-sky-50 dark:bg-sky-950/40 rounded-2xl p-4 flex flex-col gap-3 border border-sky-100 dark:border-sky-900/50">
+            <div class="flex justify-between items-center">
+                <span class="text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider">🎯 주요 D-Day</span>
+                <button id="open-dday-modal" class="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer">
+                    + 디데이 설정
+                </button>
+            </div>
+            <div id="dday-display" class="flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-200">
+                <span id="dday-title-text" class="text-slate-500 dark:text-slate-400 text-xs">설정된 디데이가 없습니다.</span>
+                <span id="dday-count-text" class="font-bold text-sky-600 dark:text-sky-400"></span>
+            </div>
+        </section>
+
+        <!-- 완료 개수 및 진행 바 -->
+        <section class="bg-slate-50 dark:bg-slate-700/50 rounded-2xl p-4 flex flex-col gap-3 border border-slate-100 dark:border-slate-700">
+            <div class="flex justify-between items-center text-sm font-semibold">
+                <span class="text-slate-600 dark:text-slate-300">진행 상황</span>
+                <span id="progress-text" class="text-sky-600 dark:text-sky-400 font-bold">0 / 0</span>
+            </div>
+            <div class="w-full bg-slate-200 dark:bg-slate-600 h-2.5 rounded-full overflow-hidden">
+                <div id="progress-bar" class="bg-sky-500 dark:bg-sky-400 h-full rounded-full transition-all duration-300" style="width: 0%;"></div>
+            </div>
+        </section>
+
+        <!-- 필터 탭 (전체 / 숙제 / 공부 / 약속) -->
+        <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs font-semibold scrollbar-none">
+            <button class="filter-btn px-3.5 py-1.5 rounded-xl bg-sky-500 text-white transition-all shrink-0 cursor-pointer shadow-sm shadow-sky-100 dark:shadow-none" data-filter="all">전체</button>
+            <button class="filter-btn px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all shrink-0 cursor-pointer" data-filter="숙제">숙제</button>
+            <button class="filter-btn px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all shrink-0 cursor-pointer" data-filter="공부">공부</button>
+            <button class="filter-btn px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all shrink-0 cursor-pointer" data-filter="약속">약속</button>
+        </div>
+
+        <!-- 할 일 입력 폼 -->
+        <form id="todo-form" class="flex flex-col gap-2.5 bg-sky-50/40 dark:bg-slate-700/30 p-4 rounded-2xl border border-sky-100 dark:border-slate-700">
+            <div class="flex gap-2">
+                <input 
+                    type="text" 
+                    id="todo-input" 
+                    placeholder="어떤 일을 하실 예정인가요?" 
+                    autocomplete="off"
+                    class="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all"
+                >
+                <button 
+                    type="submit" 
+                    class="bg-sky-500 hover:bg-sky-600 active:scale-95 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-md shadow-sky-100 dark:shadow-none shrink-0 cursor-pointer"
+                >
+                    추가
+                </button>
+            </div>
+            
+            <!-- 세부 옵션 선택 (카테고리, 중요도, 상세 메모) -->
+            <div class="flex flex-col gap-2 pt-1">
+                <input 
+                    type="text" 
+                    id="todo-memo" 
+                    placeholder="상세 메모 (선택사항)" 
+                    autocomplete="off"
+                    class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all text-slate-600 dark:text-slate-300"
+                >
+                <div class="flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-2">
+                        <span class="text-slate-400 font-medium">분류:</span>
+                        <select id="todo-category" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-600 dark:text-slate-300 cursor-pointer">
+                            <option value="숙제">숙제</option>
+                            <option value="공부">공부</option>
+                            <option value="약속">약속</option>
+                        </select>
+                    </div>
+                    <label class="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input type="checkbox" id="todo-important" class="w-4 h-4 rounded text-sky-500 focus:ring-sky-400 cursor-pointer">
+                        <span class="font-medium text-amber-500 dark:text-amber-400">★ 중요</span>
+                    </label>
+                </div>
+            </div>
+        </form>
+
+        <!-- 할 일 목록 영역 -->
+        <main class="flex flex-col gap-3 min-h-[220px]">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">할 일 목록 <span class="text-[10px] font-normal">(드래그로 순서 변경 가능)</span></h2>
+                <button 
+                    id="clear-completed-btn" 
+                    type="button" 
+                    class="text-xs text-slate-400 hover:text-rose-500 transition-colors font-medium hidden cursor-pointer"
+                >
+                    완료한 것 치우기
+                </button>
+            </div>
+
+            <!-- 목록 컨테이너 -->
+            <div id="todo-list" class="flex flex-col gap-2.5">
+                <!-- 자바스크립트로 동적 생성됨 -->
+            </div>
+
+            <!-- 목록이 비어있을 때 표시되는 안내 문구 -->
+            <div id="empty-state" class="flex flex-col items-center justify-center py-12 text-center text-slate-400 gap-2">
+                <span class="text-3xl">✨</span>
+                <p class="text-sm font-medium">등록된 할 일이 없어요.<br>새로운 할 일을 추가해 보세요!</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- 하단 브라우저 저장 안내 텍스트 -->
+    <footer class="mt-8 text-center">
+        <p class="text-xs text-slate-400">이 목록은 지금 쓰는 브라우저에만 저장됩니다</p>
+    </footer>
+
+    <!-- 디데이 설정 모달 -->
+    <div id="dday-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 w-full max-w-sm flex flex-col gap-4 shadow-2xl border border-slate-200 dark:border-slate-700">
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white">🎯 디데이 설정</h3>
+            <div class="flex flex-col gap-3">
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">제목 (예: 중간고사)</label>
+                    <input type="text" id="modal-dday-title" placeholder="디데이 제목 입력" class="bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400">
+                </div>
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">목표 날짜</label>
+                    <input type="date" id="modal-dday-date" class="bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400">
+                </div>
+            </div>
+            <div class="flex gap-2 mt-2">
+                <button id="modal-dday-cancel" class="flex-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 font-semibold py-2.5 rounded-xl text-sm transition-all cursor-pointer">취소</button>
+                <button id="modal-dday-save" class="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2.5 rounded-xl text-sm transition-all cursor-pointer">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 자바스크립트 로직 -->
+    <script>
+        const dateEl = document.getElementById('current-date');
+        const formEl = document.getElementById('todo-form');
+        const inputEl = document.getElementById('todo-input');
+        const memoEl = document.getElementById('todo-memo');
+        const categoryEl = document.getElementById('todo-category');
+        const importantEl = document.getElementById('todo-important');
+        const todoListEl = document.getElementById('todo-list');
+        const emptyStateEl = document.getElementById('empty-state');
+        const progressTextEl = document.getElementById('progress-text');
+        const progressBarEl = document.getElementById('progress-bar');
+        const clearCompletedBtn = document.getElementById('clear-completed-btn');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const darkModeBtn = document.getElementById('dark-mode-btn');
+        const compactModeBtn = document.getElementById('compact-mode-btn');
+
+        // 디데이 관련 DOM
+        const openDdayModalBtn = document.getElementById('open-dday-modal');
+        const ddayModal = document.getElementById('dday-modal');
+        const modalDdayTitle = document.getElementById('modal-dday-title');
+        const modalDdayDate = document.getElementById('modal-dday-date');
+        const modalDdayCancel = document.getElementById('modal-dday-cancel');
+        const modalDdaySave = document.getElementById('modal-dday-save');
+        const ddayTitleText = document.getElementById('dday-title-text');
+        const ddayCountText = document.getElementById('dday-count-text');
+
+        let todos = JSON.parse(localStorage.getItem('todos')) || [];
+        let ddayInfo = JSON.parse(localStorage.getItem('ddayInfo')) || null;
+        let currentFilter = 'all';
+        let draggedIndex = null;
+        let isCompact = JSON.parse(localStorage.getItem('isCompact')) || false;
+
+        // 다크모드 초기화 설정
+        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            darkModeBtn.textContent = '☀️';
+        }
+
+        darkModeBtn.addEventListener('click', () => {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                darkModeBtn.textContent = '🌙';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                darkModeBtn.textContent = '☀️';
+            }
+        });
+
+        // 콤팩트 모드 초기 상태 반영
+        updateCompactButtonUI();
+
+        compactModeBtn.addEventListener('click', () => {
+            isCompact = !isCompact;
+            localStorage.setItem('isCompact', JSON.stringify(isCompact));
+            updateCompactButtonUI();
+            renderTodos();
+        });
+
+        function updateCompactButtonUI() {
+            if (isCompact) {
+                compactModeBtn.classList.add('bg-sky-500', 'text-white');
+                compactModeBtn.classList.remove('bg-sky-50', 'dark:bg-slate-700', 'text-sky-600', 'dark:text-slate-300');
+            } else {
+                compactModeBtn.classList.remove('bg-sky-500', 'text-white');
+                compactModeBtn.classList.add('bg-sky-50', 'dark:bg-slate-700', 'text-sky-600', 'dark:text-slate-300');
+            }
+        }
+
+        function updateDateHeader() {
+            const now = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            dateEl.textContent = now.toLocaleDateString('ko-KR', options);
+        }
+
+        function saveTodos() {
+            localStorage.setItem('todos', JSON.stringify(todos));
+        }
+
+        function renderDday() {
+            if (!ddayInfo || !ddayInfo.date) {
+                ddayTitleText.textContent = '설정된 디데이가 없습니다.';
+                ddayCountText.textContent = '';
+                return;
+            }
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const targetDate = new Date(ddayInfo.date);
+            targetDate.setHours(0, 0, 0, 0);
+
+            const diffTime = targetDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            ddayTitleText.textContent = ddayInfo.title;
+            if (diffDays > 0) {
+                ddayCountText.textContent = `D-${diffDays}`;
+            } else if (diffDays === 0) {
+                ddayCountText.textContent = 'D-DAY 🔥';
+            } else {
+                ddayCountText.textContent = `D+${Math.abs(diffDays)}`;
+            }
+        }
+
+        // 디데이 모달 제어
+        openDdayModalBtn.addEventListener('click', () => {
+            if (ddayInfo) {
+                modalDdayTitle.value = ddayInfo.title;
+                modalDdayDate.value = ddayInfo.date;
+            } else {
+                modalDdayTitle.value = '';
+                modalDdayDate.value = '';
+            }
+            ddayModal.classList.remove('hidden');
+        });
+
+        modalDdayCancel.addEventListener('click', () => {
+            ddayModal.classList.add('hidden');
+        });
+
+        modalDdaySave.addEventListener('click', () => {
+            const title = modalDdayTitle.value.trim();
+            const date = modalDdayDate.value;
+
+            if (!title || !date) return;
+
+            ddayInfo = { title, date };
+            localStorage.setItem('ddayInfo', JSON.stringify(ddayInfo));
+            ddayModal.classList.add('hidden');
+            renderDday();
+        });
+
+        // 필터 버튼 클릭 이벤트
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                filterBtns.forEach(b => {
+                    b.className = 'filter-btn px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all shrink-0 cursor-pointer';
+                });
+                e.target.className = 'filter-btn px-3.5 py-1.5 rounded-xl bg-sky-500 text-white transition-all shrink-0 cursor-pointer shadow-sm shadow-sky-100 dark:shadow-none';
+                currentFilter = e.target.getAttribute('data-filter');
+                renderTodos();
+            });
+        });
+
+        function renderTodos() {
+            todoListEl.innerHTML = '';
+
+            const filteredTodos = todos.filter(todo => {
+                if (currentFilter === 'all') return true;
+                return todo.category === currentFilter;
+            });
+
+            if (filteredTodos.length === 0) {
+                emptyStateEl.classList.remove('hidden');
+            } else {
+                emptyStateEl.classList.add('hidden');
+            }
+
+            const hasCompleted = todos.some(todo => todo.completed);
+            if (hasCompleted) {
+                clearCompletedBtn.classList.remove('hidden');
+            } else {
+                clearCompletedBtn.classList.add('hidden');
+            }
+
+            filteredTodos.forEach((todo) => {
+                const actualIndex = todos.indexOf(todo);
+
+                const card = document.createElement('div');
+                
+                // 콤팩트 모드 여부에 따른 패딩 및 레이아웃 조절
+                const paddingClass = isCompact ? 'p-2.5' : 'p-4';
+                const gapClass = isCompact ? 'gap-1' : 'gap-1.5';
+
+                card.className = `flex flex-col ${gapClass} ${paddingClass} rounded-2xl border transition-all cursor-grab active:cursor-grabbing ${
+                    todo.completed 
+                        ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-400' 
+                        : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 shadow-sm hover:border-sky-100 text-slate-700 dark:text-slate-200'
+                } ${todo.important && !todo.completed ? 'border-l-4 border-l-amber-500' : ''}`;
+
+                // 드래그 앤 드롭 속성 부여
+                card.setAttribute('draggable', 'true');
+                card.addEventListener('dragstart', () => {
+                    draggedIndex = actualIndex;
+                    card.classList.add('opacity-40');
+                });
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('opacity-40');
+                });
+                card.addEventListener('dragover', (e) => e.preventDefault());
+                card.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    if (draggedIndex === null || draggedIndex === actualIndex) return;
+                    const movedItem = todos.splice(draggedIndex, 1)[0];
+                    todos.splice(actualIndex, 0, movedItem);
+                    draggedIndex = null;
+                    saveTodos();
+                    renderTodos();
+                });
+
+                const topRow = document.createElement('div');
+                topRow.className = 'flex items-center justify-between';
+
+                const leftWrapper = document.createElement('div');
+                leftWrapper.className = 'flex items-center gap-3 flex-1 cursor-pointer overflow-hidden';
+                leftWrapper.addEventListener('click', () => toggleTodo(actualIndex));
+
+                const checkboxSize = isCompact ? 'w-4 h-4' : 'w-5 h-5';
+                const checkbox = document.createElement('div');
+                checkbox.className = `${checkboxSize} rounded-lg border flex items-center justify-center shrink-0 transition-all ${
+                    todo.completed 
+                        ? 'bg-sky-500 border-sky-500 text-white' 
+                        : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
+                }`;
+                
+                if (todo.completed) {
+                    checkbox.innerHTML = `
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    `;
+                }
+
+                const textContainer = document.createElement('div');
+                textContainer.className = 'flex items-center gap-2 flex-1 overflow-hidden';
+
+                const categoryBadge = document.createElement('span');
+                categoryBadge.className = 'text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-sky-50 dark:bg-slate-700 text-sky-600 dark:text-sky-400 shrink-0';
+                categoryBadge.textContent = todo.category || '숙제';
+
+                const textSize = isCompact ? 'text-xs' : 'text-sm';
+                const textSpan = document.createElement('span');
+                textSpan.className = `${textSize} font-medium truncate ${todo.completed ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-200'}`;
+                textSpan.textContent = todo.text;
+
+                textContainer.appendChild(categoryBadge);
+                textContainer.appendChild(textSpan);
+
+                leftWrapper.appendChild(checkbox);
+                leftWrapper.appendChild(textContainer);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors ml-2 shrink-0 cursor-pointer';
+                deleteBtn.innerHTML = `
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                `;
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteTodo(actualIndex);
+                });
+
+                topRow.appendChild(leftWrapper);
+                topRow.appendChild(deleteBtn);
+                card.appendChild(topRow);
+
+                if (todo.memo && todo.memo.trim() !== '') {
+                    const plClass = isCompact ? 'pl-7' : 'pl-8.5';
+                    const memoSpan = document.createElement('p');
+                    memoSpan.className = `text-[11px] ${plClass} truncate ${todo.completed ? 'text-slate-400 dark:text-slate-600 line-through' : 'text-slate-500 dark:text-slate-400'}`;
+                    memoSpan.textContent = todo.memo;
+                    card.appendChild(memoSpan);
+                }
+
+                todoListEl.appendChild(card);
+            });
+
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const total = todos.length;
+            const completedCount = todos.filter(todo => todo.completed).length;
+
+            progressTextEl.textContent = `${completedCount} / ${total}`;
+
+            const percentage = total === 0 ? 0 : (completedCount / total) * 100;
+            progressBarEl.style.width = `${percentage}%`;
+        }
+
+        formEl.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = inputEl.value.trim();
+            if (!text) return;
+
+            todos.push({
+                text: text,
+                memo: memoEl.value.trim(),
+                category: categoryEl.value,
+                important: importantEl.checked,
+                completed: false
+            });
+
+            inputEl.value = '';
+            memoEl.value = '';
+            importantEl.checked = false;
+            saveTodos();
+            renderTodos();
+        });
+
+        function toggleTodo(index) {
+            todos[index].completed = !todos[index].completed;
+            saveTodos();
+            renderTodos();
+        }
+
+        function deleteTodo(index) {
+            todos.splice(index, 1);
+            saveTodos();
+            renderTodos();
+        }
+
+        clearCompletedBtn.addEventListener('click', () => {
+            todos = todos.filter(todo => !todo.completed);
+            saveTodos();
+            renderTodos();
+        });
+
+        updateDateHeader();
+        renderDday();
+        renderTodos();
+    </script>
+</body>
+</html>
