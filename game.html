@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>도시 스프린트: 3D 무한 달려라!</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #eef2f5;
+            font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+            height: 100vh;
+            max-height: 840px;
+            background: linear-gradient(to bottom, #dbeafe, #eff6ff);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 상단 UI 정보창 */
+        #ui-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .ui-badge {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2.5px solid #2d3748;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 20px;
+            font-weight: 800;
+            color: #2d3748;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #canvas-wrapper {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* 하단 컨트롤 패드 */
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .control-btn {
+            background: #ffffff;
+            border: 3px solid #2d3748;
+            border-radius: 18px;
+            padding: 14px 20px;
+            font-size: 18px;
+            font-weight: 800;
+            color: #2d3748;
+            box-shadow: 0 5px 0 #2d3748;
+            cursor: pointer;
+            touch-action: manipulation;
+            transition: transform 0.05s, box-shadow 0.05s;
+        }
+
+        .control-btn:active, .control-btn.active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #2d3748;
+            background-color: #feefc3;
+        }
+
+        .action-btn {
+            background: #4ba3e3;
+            color: #ffffff;
+        }
+
+        /* 오버레이 창 */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(45, 55, 72, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .overlay-card {
+            background: #ffffff;
+            border: 4px solid #2d3748;
+            border-radius: 24px;
+            padding: 28px 24px;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 12px 0 #2d3748;
+        }
+
+        .overlay-title {
+            font-size: 26px;
+            font-weight: 900;
+            color: #2d3748;
+            margin-bottom: 12px;
+        }
+
+        .overlay-desc {
+            font-size: 16px;
+            color: #4a5568;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .start-btn {
+            background: #4ba3e3;
+            color: #ffffff;
+            border: 3px solid #2d3748;
+            border-radius: 16px;
+            padding: 14px 28px;
+            font-size: 20px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #2d3748;
+            transition: transform 0.05s, box-shadow 0.05s;
+            width: 100%;
+        }
+
+        .start-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #2d3748;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- 상단 점수 및 제한시간 UI -->
+        <div id="ui-header">
+            <div class="ui-badge">
+                ⏱ <span id="time-display">03:00</span>
+            </div>
+            <div class="ui-badge">
+                ⭐ <span id="score-display">0</span>
+            </div>
+        </div>
+
+        <!-- 3D 캔버스 -->
+        <div id="canvas-wrapper">
+            <canvas id="gameCanvas"></canvas>
+        </div>
+
+        <!-- 터치/마우스 제어 패드 -->
+        <div id="controls">
+            <div class="btn-group">
+                <button id="btn-left" class="control-btn">◄</button>
+                <button id="btn-right" class="control-btn">►</button>
+            </div>
+            <div class="btn-group">
+                <button id="btn-duck" class="control-btn action-btn">▼ 숙이기</button>
+                <button id="btn-jump" class="control-btn action-btn">▲ 점프</button>
+            </div>
+        </div>
+
+        <!-- 시작 및 결과 오버레이 -->
+        <div id="overlay" class="overlay">
+            <div class="overlay-card">
+                <div id="overlay-title" class="overlay-title">도시 스프린트!</div>
+                <div id="overlay-desc" class="overlay-desc">
+                    하치와레와 함께 달려보세요!<br>
+                    - <b>좌/우 방향키</b>: 레인 변경<br>
+                    - <b>Space / ▲</b>: 점프<br>
+                    - <b>▼ 키 누르고 있기</b>: 아래로 숙이기
+                </div>
+                <button id="start-btn" class="start-btn">게임 시작!</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 규격 상수
+        const GAME_ID = 'my-game';
+        const TOTAL_TIME = 180; // 3분 (180초)
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const scoreDisplay = document.getElementById('score-display');
+        const timeDisplay = document.getElementById('time-display');
+        const overlay = document.getElementById('overlay');
+        const overlayTitle = document.getElementById('overlay-title');
+        const overlayDesc = document.getElementById('overlay-desc');
+        const startBtn = document.getElementById('start-btn');
+
+        const btnLeft = document.getElementById('btn-left');
+        const btnRight = document.getElementById('btn-right');
+        const btnJump = document.getElementById('btn-jump');
+        const btnDuck = document.getElementById('btn-duck');
+
+        let isPlaying = false;
+        let score = 0;
+        let timeLeft = TOTAL_TIME;
+        let gameSpeed = 0.0028; // 속도를 느리게 유지
+        let frameCount = 0;
+        let animationFrameId = null;
+        let timerInterval = null;
+
+        // 플레이어 상태 (중력을 대폭 낮추고 점프력을 높여 체공 시간을 훨씬 길게 조정)
+        const player = {
+            lane: 0, // -1: 왼쪽, 0: 중앙, 1: 오른쪽
+            targetLane: 0,
+            laneX: 0,
+            jumpY: 0,
+            vy: 0,
+            gravity: 0.35, // 중력을 더 낮추어 풍선처럼 여유 있게 부유
+            jumpPower: -15.0, // 점프 높이를 기존보다 대폭 상승시켜 낮은 장애물을 완벽히 넘도록 조정
+            isGrounded: true,
+            isRolling: false,
+            rollKeyDown: false
+        };
+
+        // 장애물 및 별사탕
+        let obstacles = [];
+        let coins = [];
+        let particles = [];
+
+        // 캔버스 크기 조정
+        function resizeCanvas() {
+            const wrapper = document.getElementById('canvas-wrapper');
+            canvas.width = wrapper.clientWidth;
+            canvas.height = wrapper.clientHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 3D 투영 스케일 계산
+        function getPerspective(z) {
+            const perspective = 0.85;
+            const scale = Math.pow(z, 2.2) * perspective;
+            return Math.max(0, scale);
+        }
+
+        // 플레이어 조작
+        function moveLeft() {
+            if (!isPlaying) return;
+            if (player.targetLane > -1) player.targetLane--;
+        }
+
+        function moveRight() {
+            if (!isPlaying) return;
+            if (player.targetLane < 1) player.targetLane++;
+        }
+
+        function doJump() {
+            if (!isPlaying) return;
+            if (player.isGrounded && !player.isRolling) {
+                player.vy = player.jumpPower;
+                player.isGrounded = false;
+            }
+        }
+
+        function setRollState(isRolling) {
+            if (!isPlaying) return;
+            player.rollKeyDown = isRolling;
+            if (player.isGrounded) {
+                player.isRolling = isRolling;
+            }
+        }
+
+        // 객체 생성
+        function spawnObjects() {
+            if (frameCount % Math.max(60, Math.floor(100 - score * 0.005)) === 0) {
+                const lane = Math.floor(Math.random() * 3) - 1;
+                const type = Math.random() < 0.4 ? 'high' : 'low'; // high: 숙이기, low: 점프
+                obstacles.push({
+                    lane: lane,
+                    z: 0.01,
+                    type: type,
+                    width: 0.28,
+                    passed: false
+                });
+            }
+
+            if (frameCount % 40 === 0) {
+                const lane = Math.floor(Math.random() * 3) - 1;
+                coins.push({
+                    lane: lane,
+                    z: 0.01,
+                    collected: false
+                });
+            }
+        }
+
+        // 하치와레 뒷모습 직접 드로잉 (크기 대폭 유지)
+        function drawHachiware(x, y, scale, isGrounded, isRolling, runBounce) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // 그림자
+            ctx.fillStyle = 'rgba(51, 65, 85, 0.25)';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 48 * scale, 15 * scale, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (isRolling) {
+                // 숙이기/구르기: 웅크린 하치와레 뒷모습
+                ctx.translate(0, -20 * scale);
+                
+                // 둥근 하얀 몸통
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#2d3748';
+                ctx.lineWidth = 4.5 * scale;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 42 * scale, 28 * scale, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // 정수리 파란 가르마
+                ctx.fillStyle = '#4ba3e3';
+                ctx.beginPath();
+                ctx.moveTo(-42 * scale, -4 * scale);
+                ctx.quadraticCurveTo(-21 * scale, -28 * scale, 0, -7 * scale);
+                ctx.quadraticCurveTo(21 * scale, -28 * scale, 42 * scale, -4 * scale);
+                ctx.quadraticCurveTo(0, -38 * scale, -42 * scale, -4 * scale);
+                ctx.closePath();
+                ctx.fill();
+
+                // 양쪽 파란 귀
+                ctx.fillStyle = '#4ba3e3';
+                ctx.beginPath();
+                ctx.moveTo(-28 * scale, -15 * scale);
+                ctx.lineTo(-40 * scale, -42 * scale);
+                ctx.lineTo(-12 * scale, -24 * scale);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(28 * scale, -15 * scale);
+                ctx.lineTo(40 * scale, -42 * scale);
+                ctx.lineTo(12 * scale, -24 * scale);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // 귀여운 파란 꼬리
+                ctx.fillStyle = '#4ba3e3';
+                ctx.beginPath();
+                ctx.ellipse(25 * scale, 14 * scale, 13 * scale, 7.5 * scale, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.restore();
+                return;
+            }
+
+            const baseY = runBounce - (55 * scale);
+            ctx.translate(0, baseY);
+
+            // 하치와레 몸체
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#2d3748';
+            ctx.lineWidth = 5.5 * scale;
+            
+            ctx.beginPath();
+            ctx.roundRect(-42 * scale, -45 * scale, 84 * scale, 90 * scale, [42 * scale, 42 * scale, 34 * scale, 34 * scale]);
+            ctx.fill();
+            ctx.stroke();
+
+            // 파란 정수리 가르마
+            ctx.fillStyle = '#4ba3e3';
+            ctx.beginPath();
+            ctx.moveTo(-42 * scale, -16 * scale);
+            ctx.quadraticCurveTo(-21 * scale, -45 * scale, 0, -19 * scale);
+            ctx.quadraticCurveTo(21 * scale, -45 * scale, 42 * scale, -16 * scale);
+            ctx.quadraticCurveTo(28 * scale, -49 * scale, 0, -51 * scale);
+            ctx.quadraticCurveTo(-28 * scale, -49 * scale, -42 * scale, -16 * scale);
+            ctx.closePath();
+            ctx.fill();
+
+            // 귀
+            ctx.fillStyle = '#4ba3e3';
+            ctx.strokeStyle = '#2d3748';
+            ctx.lineWidth = 5 * scale;
+
+            // 왼쪽 귀
+            ctx.beginPath();
+            ctx.moveTo(-25 * scale, -36 * scale);
+            ctx.lineTo(-46 * scale, -68 * scale);
+            ctx.lineTo(-9 * scale, -45 * scale);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // 오른쪽 귀
+            ctx.beginPath();
+            ctx.moveTo(25 * scale, -36 * scale);
+            ctx.lineTo(46 * scale, -68 * scale);
+            ctx.lineTo(9 * scale, -45 * scale);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // 꼬리
+            const tailSwing = Math.sin(frameCount * 0.3) * 0.2;
+            ctx.save();
+            ctx.translate(24 * scale, 32 * scale);
+            ctx.rotate(tailSwing);
+            ctx.fillStyle = '#4ba3e3';
+            ctx.strokeStyle = '#2d3748';
+            ctx.lineWidth = 4.5 * scale;
+            ctx.beginPath();
+            ctx.ellipse(11 * scale, -9 * scale, 14 * scale, 8 * scale, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
+            // 앙증맞은 발
+            const limbSwing = Math.sin(frameCount * 0.3) * 8 * scale;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#2d3748';
+            ctx.lineWidth = 4.5 * scale;
+
+            ctx.beginPath();
+            ctx.arc(-16 * scale, 47 * scale + limbSwing, 9 * scale, 0, Math.PI * 2);
+            ctx.arc(16 * scale, 47 * scale - limbSwing, 9 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // 게임 메인 드로잉
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const horizonY = canvas.height * 0.38;
+            const centerX = canvas.width / 2;
+
+            // 1. 파스텔 배경
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
+            bgGrad.addColorStop(0, '#bae6fd');
+            bgGrad.addColorStop(1, '#fef08a');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, canvas.width, horizonY);
+
+            // 언덕
+            ctx.fillStyle = '#86efac';
+            ctx.beginPath();
+            ctx.ellipse(centerX, horizonY + 10, canvas.width * 0.85, 45, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 2. 도로
+            const roadBottomWidth = canvas.width * 0.92;
+            const roadTopWidth = 40;
+
+            ctx.fillStyle = '#f1f5f9';
+            ctx.beginPath();
+            ctx.moveTo(centerX - roadTopWidth / 2, horizonY);
+            ctx.lineTo(centerX + roadTopWidth / 2, horizonY);
+            ctx.lineTo(centerX + roadBottomWidth / 2, canvas.height);
+            ctx.lineTo(centerX - roadBottomWidth / 2, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+
+            // 트랙 가이드라인
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 3;
+            for (let i = -0.5; i <= 0.5; i += 1) {
+                ctx.beginPath();
+                ctx.moveTo(centerX + roadTopWidth * (i / 1.5), horizonY);
+                ctx.lineTo(centerX + roadBottomWidth * (i / 1.5), canvas.height);
+                ctx.stroke();
+            }
+
+            // 3. 별사탕 & 장애물 렌더링 (장애물 크기 대폭 확대 적용)
+            const allEntities = [];
+
+            coins.forEach(coin => {
+                if (!coin.collected) {
+                    allEntities.push({ type: 'coin', z: coin.z, obj: coin });
+                }
+            });
+
+            obstacles.forEach(obs => {
+                allEntities.push({ type: 'obstacle', z: obs.z, obj: obs });
+            });
+
+            // 원근 정렬 (z 오름차순)
+            allEntities.sort((a, b) => a.z - b.z);
+
+            allEntities.forEach(item => {
+                const z = item.z;
+                const scale = getPerspective(z);
+                const currentY = horizonY + (canvas.height - horizonY) * scale;
+                const currentRoadWidth = roadTopWidth + (roadBottomWidth - roadTopWidth) * scale;
+                const laneWidth = currentRoadWidth / 3;
+                const currentX = centerX + (item.obj.lane * laneWidth);
+
+                if (item.type === 'coin') {
+                    // 훨씬 큼직한 별사탕
+                    ctx.save();
+                    ctx.translate(currentX, currentY - (35 * scale));
+                    ctx.fillStyle = '#facc15';
+                    ctx.strokeStyle = '#ca8a04';
+                    ctx.lineWidth = 3.5 * scale;
+
+                    ctx.beginPath();
+                    ctx.arc(0, 0, Math.max(4, 26 * scale), 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.restore();
+                } else {
+                    // 대폭 커진 대형 장애물 (기존 크기보다 1.6~2배 확대)
+                    const obs = item.obj;
+                    ctx.save();
+                    ctx.translate(currentX, currentY);
+
+                    if (obs.type === 'low') {
+                        // 대형 낮은 장애물 (거대한 푸딩)
+                        ctx.fillStyle = '#f87171';
+                        ctx.strokeStyle = '#2d3748';
+                        ctx.lineWidth = 5 * scale;
+                        ctx.beginPath();
+                        ctx.roundRect(-55 * scale, -70 * scale, 110 * scale, 70 * scale, 16 * scale);
+                        ctx.fill();
+                        ctx.stroke();
+
+                        // 시각적 상단 시인성 황금 띠
+                        ctx.fillStyle = '#fef08a';
+                        ctx.fillRect(-45 * scale, -58 * scale, 90 * scale, 16 * scale);
+                    } else {
+                        // 대형 높은 장애물 (거대한 공중 표지판)
+                        ctx.fillStyle = '#fbbf24';
+                        ctx.strokeStyle = '#2d3748';
+                        ctx.lineWidth = 5 * scale;
+                        ctx.beginPath();
+                        ctx.roundRect(-60 * scale, -145 * scale, 120 * scale, 68 * scale, 12 * scale);
+                        ctx.fill();
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#2d3748';
+                        ctx.fillRect(-8 * scale, -78 * scale, 16 * scale, 78 * scale);
+                    }
+                    ctx.restore();
+                }
+            });
+
+            // 4. 플레이어 하치와레
+            const playerZ = 0.86;
+            const playerScale = getPerspective(playerZ);
+            const playerBaseY = horizonY + (canvas.height - horizonY) * playerScale;
+            const playerRoadWidth = roadTopWidth + (roadBottomWidth - roadTopWidth) * playerScale;
+            const playerLaneWidth = playerRoadWidth / 3;
+            const playerX = centerX + (player.laneX * playerLaneWidth);
+            // jumpY에 시각적 가중치를 주어 점프 시 화면 위쪽으로 높게 솟구치도록 표현
+            const playerY = playerBaseY - (player.jumpY * 1.8);
+
+            const runBounce = (player.isGrounded && !player.isRolling) ? Math.sin(frameCount * 0.3) * 6 : 0;
+
+            drawHachiware(playerX, playerY, playerScale * 2.2, player.isGrounded, player.isRolling, runBounce);
+
+            // 파티클
+            particles.forEach((p, index) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.04;
+                if (p.alpha <= 0) {
+                    particles.splice(index, 1);
+                } else {
+                    ctx.fillStyle = `rgba(250, 204, 21, ${p.alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+        }
+
+        // 파티클 생성
+        function createParticles(x, y) {
+            for (let i = 0; i < 8; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    size: Math.random() * 5 + 3,
+                    alpha: 1
+                });
+            }
+        }
+
+        // 게임 루프
+        function update() {
+            if (!isPlaying) return;
+
+            frameCount++;
+            score += 1;
+            scoreDisplay.textContent = score;
+
+            // 속도 유지
+            gameSpeed = 0.0028 + (score * 0.0000012);
+
+            // 플레이어 X 레인 보정
+            player.laneX += (player.targetLane - player.laneX) * 0.22;
+
+            // 구르기/숙이기 누름 유지 업데이트
+            player.isRolling = player.rollKeyDown && player.isGrounded;
+
+            // 체공 시간이 길어진 Jump 처리
+            if (!player.isGrounded) {
+                player.jumpY -= player.vy;
+                player.vy += player.gravity; // 중력 적용
+                if (player.jumpY <= 0) {
+                    player.jumpY = 0;
+                    player.vy = 0;
+                    player.isGrounded = true;
+                }
+            }
+
+            spawnObjects();
+
+            // 별사탕 업데이트 및 충돌
+            for (let i = coins.length - 1; i >= 0; i--) {
+                const coin = coins[i];
+                coin.z += gameSpeed;
+
+                if (!coin.collected && Math.abs(coin.z - 0.86) < 0.055 && coin.lane === Math.round(player.laneX)) {
+                    coin.collected = true;
+                    score += 150;
+                    const horizonY = canvas.height * 0.38;
+                    const centerX = canvas.width / 2;
+                    createParticles(centerX + player.laneX * 90, canvas.height * 0.72);
+                }
+
+                if (coin.z > 1.1) {
+                    coins.splice(i, 1);
+                }
+            }
+
+            // 장애물 업데이트 및 충돌 판정 (높아진 장애물과 넓어진 점프 높이 반사)
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.z += gameSpeed;
+
+                // 충돌 판정 범위
+                if (Math.abs(obs.z - 0.86) < 0.05 && obs.lane === Math.round(player.laneX)) {
+                    let hit = false;
+
+                    // 점프 높이(jumpY)가 25 이상이면 낮은 장애물 완벽 통과!
+                    if (obs.type === 'low' && player.jumpY < 25) {
+                        hit = true; // 일정 높이 이상 점프하지 않았을 때만 부딪힘
+                    } else if (obs.type === 'high' && !player.isRolling) {
+                        hit = true; // 숙이지 않으면 부딪힘
+                    }
+
+                    if (hit) {
+                        endGame();
+                        return;
+                    }
+                }
+
+                if (obs.z > 1.1) {
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            draw();
+            animationFrameId = requestAnimationFrame(update);
+        }
+
+        // 게임 시작
+        function startGame() {
+            score = 0;
+            timeLeft = TOTAL_TIME;
+            gameSpeed = 0.0028;
+            frameCount = 0;
+            obstacles = [];
+            coins = [];
+            particles = [];
+            isPlaying = true;
+
+            player.lane = 0;
+            player.targetLane = 0;
+            player.laneX = 0;
+            player.jumpY = 0;
+            player.vy = 0;
+            player.isGrounded = true;
+            player.isRolling = false;
+            player.rollKeyDown = false;
+
+            scoreDisplay.textContent = score;
+            updateTimeDisplay();
+
+            overlay.classList.add('hidden');
+
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            if (timerInterval) clearInterval(timerInterval);
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimeDisplay();
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            animationFrameId = requestAnimationFrame(update);
+        }
+
+        function updateTimeDisplay() {
+            const min = String(Math.floor(timeLeft / 60)).padStart(2, '0');
+            const sec = String(timeLeft % 60).padStart(2, '0');
+            timeDisplay.textContent = `${min}:${sec}`;
+        }
+
+        // 게임 종료 및 gameOver(점수) 규격 호출
+        function endGame() {
+            isPlaying = false;
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            if (timerInterval) clearInterval(timerInterval);
+
+            gameOver(score);
+        }
+
+        function gameOver(finalScore) {
+            overlayTitle.textContent = '게임 종료!';
+            overlayDesc.innerHTML = `하치와레의 최종 점수<br><b style="font-size:28px; color:#4ba3e3;">${finalScore}점</b>`;
+            startBtn.textContent = '다시 하기';
+            overlay.classList.remove('hidden');
+        }
+
+        // 키보드 이벤트
+        window.addEventListener('keydown', (e) => {
+            if (!isPlaying) return;
+
+            switch (e.code) {
+                case 'Space':
+                case 'ArrowUp':
+                    e.preventDefault();
+                    doJump();
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    setRollState(true);
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    moveLeft();
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    moveRight();
+                    break;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown') {
+                setRollState(false);
+            }
+        });
+
+        // 하단 컨트롤 버튼 이벤트
+        btnLeft.addEventListener('pointerdown', (e) => { e.preventDefault(); moveLeft(); });
+        btnRight.addEventListener('pointerdown', (e) => { e.preventDefault(); moveRight(); });
+        btnJump.addEventListener('pointerdown', (e) => { e.preventDefault(); doJump(); });
+        
+        btnDuck.addEventListener('pointerdown', (e) => { e.preventDefault(); setRollState(true); });
+        btnDuck.addEventListener('pointerup', (e) => { e.preventDefault(); setRollState(false); });
+        btnDuck.addEventListener('pointerleave', (e) => { e.preventDefault(); setRollState(false); });
+
+        // 터치 제어
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        canvas.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        canvas.addEventListener('touchend', (e) => {
+            if (!isPlaying) return;
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+
+            const dx = touchEndX - touchStartX;
+            const dy = touchEndY - touchStartY;
+
+            if (Math.abs(dx) > Math.abs(dy)) {
+                if (dx > 30) moveRight();
+                else if (dx < -30) moveLeft();
+            } else {
+                if (dy < -30) doJump();
+            }
+        }, { passive: true });
+
+        startBtn.addEventListener('click', startGame);
+
+        draw();
+    </script>
+</body>
+</html>
