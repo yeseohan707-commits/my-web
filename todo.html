@@ -1,35 +1,11 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>오늘 할 일</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-        }
-    </script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap');
-        body {
-            font-family: 'Pretendard', sans-serif;
-        }
-        .transition-all {
-            transition: all 0.2s ease-in-out;
-        }
-    </style>
-</head>
-<body class="min-h-screen py-8 px-4 flex flex-col justify-between items-center bg-sky-50/50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-200">
-
-    <!-- 메인 컨테이너 -->
-    <div class="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-xl p-6 md:p-8 flex flex-col gap-6 border border-sky-100/80 dark:border-slate-700">
-        
+<!-- ... existing code ... -->
         <!-- 헤더 및 오늘 날짜, 다크모드/콤팩트 모드 토글 -->
         <header class="flex justify-between items-center">
             <div class="flex flex-col gap-1">
-                <h1 class="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">오늘 할 일 📝</h1>
+                <h1 class="text-2xl font-bold tracking-tight text-slate-800 dark:text-white flex items-center gap-2">
+                    <span>오늘 할 일 📝</span>
+                    <span id="save-status" class="text-xs font-normal px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">오프라인 모드</span>
+                </h1>
                 <p id="current-date" class="text-slate-500 dark:text-slate-400 font-medium text-sm"></p>
             </div>
             <div class="flex items-center gap-2">
@@ -42,137 +18,92 @@
             </div>
         </header>
 
-        <!-- 디데이(D-Day) 위젯 섹션 -->
-        <section class="bg-sky-50 dark:bg-sky-950/40 rounded-2xl p-4 flex flex-col gap-3 border border-sky-100 dark:border-sky-900/50">
-            <div class="flex justify-between items-center">
-                <span class="text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider">🎯 주요 D-Day</span>
-                <button id="open-dday-modal" class="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer">
-                    + 디데이 설정
+        <!-- 사용자 프로필 및 로그인/로그아웃 영역 -->
+        <section id="auth-section" class="bg-sky-50/70 dark:bg-slate-700/50 rounded-2xl p-4 border border-sky-100 dark:border-slate-700">
+            <!-- 로그인 전 화면 -->
+            <div id="logged-out-view" class="flex flex-col items-center gap-3 py-2 text-center">
+                <p class="text-xs text-slate-600 dark:text-slate-300">클라우드 동기화를 이용하려면 구글 계정으로 로그인하세요.</p>
+                <button id="google-login-btn" type="button" class="flex items-center justify-center gap-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-xs cursor-pointer text-slate-700 dark:text-slate-200">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    </svg>
+                    <span>구글 계정으로 로그인</span>
                 </button>
             </div>
-            <div id="dday-display" class="flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-200">
-                <span id="dday-title-text" class="text-slate-500 dark:text-slate-400 text-xs">설정된 디데이가 없습니다.</span>
-                <span id="dday-count-text" class="font-bold text-sky-600 dark:text-sky-400"></span>
-            </div>
-        </section>
 
-        <!-- 완료 개수 및 진행 바 -->
-        <section class="bg-slate-50 dark:bg-slate-700/50 rounded-2xl p-4 flex flex-col gap-3 border border-slate-100 dark:border-slate-700">
-            <div class="flex justify-between items-center text-sm font-semibold">
-                <span class="text-slate-600 dark:text-slate-300">진행 상황</span>
-                <span id="progress-text" class="text-sky-600 dark:text-sky-400 font-bold">0 / 0</span>
-            </div>
-            <div class="w-full bg-slate-200 dark:bg-slate-600 h-2.5 rounded-full overflow-hidden">
-                <div id="progress-bar" class="bg-sky-500 dark:bg-sky-400 h-full rounded-full transition-all duration-300" style="width: 0%;"></div>
-            </div>
-        </section>
-
-        <!-- 필터 탭 (전체 / 숙제 / 공부 / 약속) -->
-        <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs font-semibold scrollbar-none">
-            <button class="filter-btn px-3.5 py-1.5 rounded-xl bg-sky-500 text-white transition-all shrink-0 cursor-pointer shadow-sm shadow-sky-100 dark:shadow-none" data-filter="all">전체</button>
-            <button class="filter-btn px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all shrink-0 cursor-pointer" data-filter="숙제">숙제</button>
-            <button class="filter-btn px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all shrink-0 cursor-pointer" data-filter="공부">공부</button>
-            <button class="filter-btn px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all shrink-0 cursor-pointer" data-filter="약속">약속</button>
-        </div>
-
-        <!-- 할 일 입력 폼 -->
-        <form id="todo-form" class="flex flex-col gap-2.5 bg-sky-50/40 dark:bg-slate-700/30 p-4 rounded-2xl border border-sky-100 dark:border-slate-700">
-            <div class="flex gap-2">
-                <input 
-                    type="text" 
-                    id="todo-input" 
-                    placeholder="어떤 일을 하실 예정인가요?" 
-                    autocomplete="off"
-                    class="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all"
-                >
-                <button 
-                    type="submit" 
-                    class="bg-sky-500 hover:bg-sky-600 active:scale-95 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-md shadow-sky-100 dark:shadow-none shrink-0 cursor-pointer"
-                >
-                    추가
-                </button>
-            </div>
-            
-            <!-- 세부 옵션 선택 (카테고리, 중요도, 상세 메모) -->
-            <div class="flex flex-col gap-2 pt-1">
-                <input 
-                    type="text" 
-                    id="todo-memo" 
-                    placeholder="상세 메모 (선택사항)" 
-                    autocomplete="off"
-                    class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all text-slate-600 dark:text-slate-300"
-                >
-                <div class="flex items-center justify-between text-xs">
-                    <div class="flex items-center gap-2">
-                        <span class="text-slate-400 font-medium">분류:</span>
-                        <select id="todo-category" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-sky-400 text-slate-600 dark:text-slate-300 cursor-pointer">
-                            <option value="숙제">숙제</option>
-                            <option value="공부">공부</option>
-                            <option value="약속">약속</option>
-                        </select>
+            <!-- 로그인 후 화면 -->
+            <div id="logged-in-view" class="hidden flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <img id="user-photo" src="" alt="프로필" class="w-9 h-9 rounded-full object-cover border border-slate-200 dark:border-slate-600">
+                    <div class="flex flex-col">
+                        <span id="user-name" class="text-xs font-bold text-slate-800 dark:text-slate-100"></span>
+                        <span id="user-email" class="text-[10px] text-slate-500 dark:text-slate-400"></span>
                     </div>
-                    <label class="flex items-center gap-1.5 cursor-pointer select-none">
-                        <input type="checkbox" id="todo-important" class="w-4 h-4 rounded text-sky-500 focus:ring-sky-400 cursor-pointer">
-                        <span class="font-medium text-amber-500 dark:text-amber-400">★ 중요</span>
-                    </label>
                 </div>
-            </div>
-        </form>
-
-        <!-- 할 일 목록 영역 -->
-        <main class="flex flex-col gap-3 min-h-[220px]">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">할 일 목록 <span class="text-[10px] font-normal">(드래그로 순서 변경 가능)</span></h2>
-                <button 
-                    id="clear-completed-btn" 
-                    type="button" 
-                    class="text-xs text-slate-400 hover:text-rose-500 transition-colors font-medium hidden cursor-pointer"
-                >
-                    완료한 것 치우기
+                <button id="logout-btn" type="button" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-200/70 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-700 dark:text-slate-200 transition-all cursor-pointer">
+                    로그아웃
                 </button>
             </div>
 
-            <!-- 목록 컨테이너 -->
-            <div id="todo-list" class="flex flex-col gap-2.5">
-                <!-- 자바스크립트로 동적 생성됨 -->
-            </div>
+            <!-- 에러 알림 영역 -->
+            <div id="auth-error-msg" class="hidden mt-2 p-2 text-xs bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 rounded-xl break-all"></div>
+        </section>
 
-            <!-- 목록이 비어있을 때 표시되는 안내 문구 -->
-            <div id="empty-state" class="flex flex-col items-center justify-center py-12 text-center text-slate-400 gap-2">
-                <span class="text-3xl">✨</span>
-                <p class="text-sm font-medium">등록된 할 일이 없어요.<br>새로운 할 일을 추가해 보세요!</p>
-            </div>
-        </main>
-    </div>
-
+        <!-- 디데이(D-Day) 위젯 섹션 -->
+<!-- ... existing code ... -->
     <!-- 하단 브라우저 저장 안내 텍스트 -->
     <footer class="mt-8 text-center">
-        <p class="text-xs text-slate-400">이 목록은 지금 쓰는 브라우저에만 저장됩니다</p>
+        <p id="footer-notice" class="text-xs text-slate-400">이 목록은 지금 쓰는 브라우저에만 저장됩니다</p>
     </footer>
 
     <!-- 디데이 설정 모달 -->
-    <div id="dday-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 hidden z-50">
-        <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 w-full max-w-sm flex flex-col gap-4 shadow-2xl border border-slate-200 dark:border-slate-700">
-            <h3 class="text-lg font-bold text-slate-800 dark:text-white">🎯 디데이 설정</h3>
-            <div class="flex flex-col gap-3">
-                <div class="flex flex-col gap-1">
-                    <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">제목 (예: 중간고사)</label>
-                    <input type="text" id="modal-dday-title" placeholder="디데이 제목 입력" class="bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400">
-                </div>
-                <div class="flex flex-col gap-1">
-                    <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">목표 날짜</label>
-                    <input type="date" id="modal-dday-date" class="bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400">
-                </div>
-            </div>
-            <div class="flex gap-2 mt-2">
-                <button id="modal-dday-cancel" class="flex-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 font-semibold py-2.5 rounded-xl text-sm transition-all cursor-pointer">취소</button>
-                <button id="modal-dday-save" class="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2.5 rounded-xl text-sm transition-all cursor-pointer">저장</button>
-            </div>
-        </div>
-    </div>
+<!-- ... existing code ... -->
+    <!-- 자바스크립트 로직 (파이어베이스 v10 모듈 적용) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    <!-- 자바스크립트 로직 -->
-    <script>
+        // 파이어베이스 설정값 (사용자 파이어베이스 프로필 설정값을 여기에 입력하세요)
+        const firebaseConfig = {
+            // apiKey: "YOUR_API_KEY",
+            // authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            // projectId: "YOUR_PROJECT_ID",
+            // storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            // messagingSenderId: "YOUR_SENDER_ID",
+            // appId: "YOUR_APP_ID"
+        };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'todo-app';
+        let app = null;
+        let auth = null;
+        let db = null;
+        let currentUser = null;
+        let saveTimeout = null;
+        let isFirebaseAvailable = false;
+
+        // Firebase 초기화 및 오류 핸들링
+        try {
+            if (firebaseConfig && firebaseConfig.apiKey) {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                isFirebaseAvailable = true;
+            } else if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                const envConfig = JSON.parse(__firebase_config);
+                app = initializeApp(envConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                isFirebaseAvailable = true;
+            }
+        } catch (err) {
+            console.warn("Firebase 초기화 중 오류가 발생했습니다. 연습 모드(로컬 저장소)로 작동합니다.", err);
+            isFirebaseAvailable = false;
+        }
+
         const dateEl = document.getElementById('current-date');
         const formEl = document.getElementById('todo-form');
         const inputEl = document.getElementById('todo-input');
@@ -187,6 +118,18 @@
         const filterBtns = document.querySelectorAll('.filter-btn');
         const darkModeBtn = document.getElementById('dark-mode-btn');
         const compactModeBtn = document.getElementById('compact-mode-btn');
+        const saveStatusEl = document.getElementById('save-status');
+        const footerNoticeEl = document.getElementById('footer-notice');
+
+        // 인증 DOM
+        const loggedOutView = document.getElementById('logged-out-view');
+        const loggedInView = document.getElementById('logged-in-view');
+        const googleLoginBtn = document.getElementById('google-login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userNameEl = document.getElementById('user-name');
+        const userEmailEl = document.getElementById('user-email');
+        const userPhotoEl = document.getElementById('user-photo');
+        const authErrorMsg = document.getElementById('auth-error-msg');
 
         // 디데이 관련 DOM
         const openDdayModalBtn = document.getElementById('open-dday-modal');
@@ -203,6 +146,122 @@
         let currentFilter = 'all';
         let draggedIndex = null;
         let isCompact = JSON.parse(localStorage.getItem('isCompact')) || false;
+
+        function updateStatusUI(message, isError = false) {
+            saveStatusEl.textContent = message;
+            if (isError) {
+                saveStatusEl.className = "text-xs font-normal px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-300";
+            } else {
+                saveStatusEl.className = "text-xs font-normal px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-300";
+            }
+        }
+
+        function showAuthError(message) {
+            authErrorMsg.textContent = message;
+            authErrorMsg.classList.remove('hidden');
+        }
+
+        function clearAuthError() {
+            authErrorMsg.textContent = '';
+            authErrorMsg.classList.add('hidden');
+        }
+
+        // Firestore 저장 (디바운스 적용 - 0.6초)
+        function triggerCloudSave() {
+            localStorage.setItem('todos', JSON.stringify(todos));
+            
+            if (!currentUser || !isFirebaseAvailable) {
+                updateStatusUI("로컬 저장됨");
+                return;
+            }
+
+            updateStatusUI("저장 중...");
+            if (saveTimeout) clearTimeout(saveTimeout);
+
+            saveTimeout = setTimeout(async () => {
+                try {
+                    // RULE 1 Strict path
+                    const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'data', 'todos');
+                    await setDoc(userDocRef, { items: todos }, { merge: true });
+                    updateStatusUI("저장됨");
+                } catch (err) {
+                    console.error("클라우드 저장 실패:", err);
+                    updateStatusUI("저장 실패 (로컬 보유)", true);
+                    showAuthError(`저장 오류: ${err.code || err.message}`);
+                }
+            }, 600);
+        }
+
+        // 로그인 핸들러
+        if (isFirebaseAvailable) {
+            const provider = new GoogleAuthProvider();
+
+            googleLoginBtn.addEventListener('click', async () => {
+                clearAuthError();
+                try {
+                    await signInWithPopup(auth, provider);
+                } catch (err) {
+                    console.error("Google 로그인 실패:", err);
+                    showAuthError(`로그인 실패 [${err.code || 'UNKNOWN'}]: ${err.message}`);
+                }
+            });
+
+            logoutBtn.addEventListener('click', async () => {
+                clearAuthError();
+                try {
+                    await signOut(auth);
+                } catch (err) {
+                    console.error("로그아웃 실패:", err);
+                    showAuthError(`로그아웃 실패 [${err.code}]: ${err.message}`);
+                }
+            });
+
+            onAuthStateChanged(auth, async (user) => {
+                currentUser = user;
+                if (user) {
+                    loggedOutView.classList.add('hidden');
+                    loggedInView.classList.remove('hidden');
+                    userNameEl.textContent = user.displayName || "사용자";
+                    userEmailEl.textContent = user.email || "";
+                    userPhotoEl.src = user.photoURL || "https://placehold.co/100x100/38bdf8/ffffff?text=User";
+                    footerNoticeEl.textContent = "내 할 일은 내 계정에만 저장되고 다른 사람은 볼 수 없습니다";
+                    updateStatusUI("불러오는 중...");
+
+                    // 데이터 실시간 수신 설정
+                    try {
+                        const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'todos');
+                        onSnapshot(userDocRef, (snapshot) => {
+                            if (snapshot.exists() && snapshot.data()?.items) {
+                                todos = snapshot.data().items;
+                                localStorage.setItem('todos', JSON.stringify(todos));
+                                renderTodos();
+                                updateStatusUI("저장됨");
+                            } else {
+                                // 기존 로컬 데이터를 서버에 동기화
+                                triggerCloudSave();
+                            }
+                        }, (error) => {
+                            console.error("데이터 구독 오류:", error);
+                            updateStatusUI("동기화 에러", true);
+                            showAuthError(`동기화 에러: ${error.code || error.message}`);
+                        });
+                    } catch (err) {
+                        showAuthError(`데이터 로드 에러: ${err.code || err.message}`);
+                    }
+                } else {
+                    loggedOutView.classList.remove('hidden');
+                    loggedInView.classList.add('hidden');
+                    footerNoticeEl.textContent = "이 목록은 지금 쓰는 브라우저에만 저장됩니다 (연습 모드)";
+                    updateStatusUI("오프라인 모드");
+                    todos = JSON.parse(localStorage.getItem('todos')) || [];
+                    renderTodos();
+                }
+            });
+        } else {
+            googleLoginBtn.addEventListener('click', () => {
+                showAuthError("Firebase 설정값이 제공되지 않았습니다. 현재 오프라인 연습 모드로 실행 중입니다.");
+            });
+        }
 
         // 다크모드 초기화 설정
         if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -222,7 +281,6 @@
             }
         });
 
-        // 콤팩트 모드 초기 상태 반영
         updateCompactButtonUI();
 
         compactModeBtn.addEventListener('click', () => {
@@ -246,10 +304,6 @@
             const now = new Date();
             const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
             dateEl.textContent = now.toLocaleDateString('ko-KR', options);
-        }
-
-        function saveTodos() {
-            localStorage.setItem('todos', JSON.stringify(todos));
         }
 
         function renderDday() {
@@ -278,7 +332,6 @@
             }
         }
 
-        // 디데이 모달 제어
         openDdayModalBtn.addEventListener('click', () => {
             if (ddayInfo) {
                 modalDdayTitle.value = ddayInfo.title;
@@ -306,7 +359,6 @@
             renderDday();
         });
 
-        // 필터 버튼 클릭 이벤트
         filterBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 filterBtns.forEach(b => {
@@ -343,8 +395,6 @@
                 const actualIndex = todos.indexOf(todo);
 
                 const card = document.createElement('div');
-                
-                // 콤팩트 모드 여부에 따른 패딩 및 레이아웃 조절
                 const paddingClass = isCompact ? 'p-2.5' : 'p-4';
                 const gapClass = isCompact ? 'gap-1' : 'gap-1.5';
 
@@ -354,7 +404,6 @@
                         : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 shadow-sm hover:border-sky-100 text-slate-700 dark:text-slate-200'
                 } ${todo.important && !todo.completed ? 'border-l-4 border-l-amber-500' : ''}`;
 
-                // 드래그 앤 드롭 속성 부여
                 card.setAttribute('draggable', 'true');
                 card.addEventListener('dragstart', () => {
                     draggedIndex = actualIndex;
@@ -370,7 +419,7 @@
                     const movedItem = todos.splice(draggedIndex, 1)[0];
                     todos.splice(actualIndex, 0, movedItem);
                     draggedIndex = null;
-                    saveTodos();
+                    triggerCloudSave();
                     renderTodos();
                 });
 
@@ -472,25 +521,25 @@
             inputEl.value = '';
             memoEl.value = '';
             importantEl.checked = false;
-            saveTodos();
+            triggerCloudSave();
             renderTodos();
         });
 
         function toggleTodo(index) {
             todos[index].completed = !todos[index].completed;
-            saveTodos();
+            triggerCloudSave();
             renderTodos();
         }
 
         function deleteTodo(index) {
             todos.splice(index, 1);
-            saveTodos();
+            triggerCloudSave();
             renderTodos();
         }
 
         clearCompletedBtn.addEventListener('click', () => {
             todos = todos.filter(todo => !todo.completed);
-            saveTodos();
+            triggerCloudSave();
             renderTodos();
         });
 
