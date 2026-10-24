@@ -216,15 +216,20 @@
             </div>
         </div>
 
+        <!-- 터치 안내 힌트 overlay -->
+        <div id="touch-hint" style="position: absolute; bottom: 80px; left: 0; width: 100%; text-align: center; font-size: 13px; color: #475569; font-weight: bold; pointer-events: none; opacity: 0.8;">
+            💡 화면 좌/우/상/하를 직접 터치하여 조작할 수도 있습니다!
+        </div>
+
         <!-- 시작 및 결과 오버레이 -->
         <div id="overlay" class="overlay">
             <div class="overlay-card">
                 <div id="overlay-title" class="overlay-title">도시 스프린트!</div>
                 <div id="overlay-desc" class="overlay-desc">
                     하치와레와 함께 달려보세요!<br>
-                    - <b>좌/우 방향키</b>: 레인 변경<br>
-                    - <b>Space / ▲</b>: 점프<br>
-                    - <b>▼ 키 누르고 있기</b>: 아래로 숙이기
+                    - <b>좌/우 터치 / 방향키</b>: 레인 변경<br>
+                    - <b>상단 터치 / Space / ▲</b>: 점프<br>
+                    - <b>하단 터치 / ▼ 누르고 있기</b>: 아래로 숙이기
                 </div>
                 <button id="start-btn" class="start-btn">게임 시작!</button>
             </div>
@@ -259,15 +264,15 @@
         let animationFrameId = null;
         let timerInterval = null;
 
-        // 플레이어 상태 (중력을 높이고 점프력을 낮추어 점프 체공시간과 높이를 낮춤)
+        // 플레이어 상태
         const player = {
             lane: 0, // -1: 왼쪽, 0: 중앙, 1: 오른쪽
             targetLane: 0,
             laneX: 0,
             jumpY: 0,
             vy: 0,
-            gravity: 0.85, // 중력을 높여 빠른 착지
-            jumpPower: -11.5, // 점프 높이와 체공시간을 낮춤
+            gravity: 0.85, 
+            jumpPower: -11.5,
             isGrounded: true,
             isRolling: false,
             rollKeyDown: false
@@ -321,6 +326,79 @@
                 player.isRolling = isRolling;
             }
         }
+
+        // 키보드 이벤트
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'ArrowLeft') moveLeft();
+            if (e.code === 'ArrowRight') moveRight();
+            if (e.code === 'ArrowUp' || e.code === 'Space') {
+                e.preventDefault();
+                doJump();
+            }
+            if (e.code === 'ArrowDown') {
+                e.preventDefault();
+                setRollState(true);
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown') {
+                setRollState(false);
+            }
+        });
+
+        // 하단 버튼 터치/클릭 이벤트
+        btnLeft.addEventListener('pointerdown', (e) => { e.preventDefault(); moveLeft(); });
+        btnRight.addEventListener('pointerdown', (e) => { e.preventDefault(); moveRight(); });
+        btnJump.addEventListener('pointerdown', (e) => { e.preventDefault(); doJump(); });
+
+        btnDuck.addEventListener('pointerdown', (e) => { e.preventDefault(); setRollState(true); });
+        btnDuck.addEventListener('pointerup', (e) => { e.preventDefault(); setRollState(false); });
+        btnDuck.addEventListener('pointerleave', (e) => { e.preventDefault(); setRollState(false); });
+
+        // 화면 캔버스 직접 클릭/터치 조작 (모바일 터치 및 마우스)
+        const wrapper = document.getElementById('canvas-wrapper');
+        
+        function handleScreenTouch(clientX, clientY) {
+            if (!isPlaying) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+            
+            const widthRatio = x / rect.width;
+            const heightRatio = y / rect.height;
+
+            if (heightRatio > 0.70) {
+                // 상하 중 하단 터치 -> 숙이기
+                setRollState(true);
+            } else if (heightRatio < 0.35) {
+                // 상하 중 상단 터치 -> 점프
+                doJump();
+            } else if (widthRatio < 0.35) {
+                // 좌측 터치 -> 왼쪽 이동
+                moveLeft();
+            } else if (widthRatio > 0.65) {
+                // 우측 터치 -> 오른쪽 이동
+                moveRight();
+            } else {
+                // 중앙 -> 점프
+                doJump();
+            }
+        }
+
+        wrapper.addEventListener('pointerdown', (e) => {
+            // 버튼 터치는 제외
+            if (e.target.tagName === 'BUTTON') return;
+            handleScreenTouch(e.clientX, e.clientY);
+        });
+
+        wrapper.addEventListener('pointerup', () => {
+            setRollState(false);
+        });
+
+        wrapper.addEventListener('pointerleave', () => {
+            setRollState(false);
+        });
 
         // 객체 생성
         function spawnObjects() {
@@ -762,4 +840,34 @@
 
             animationFrameId = requestAnimationFrame(update);
         }
-<!-- ... existing code -->
+
+        // 시간 표시 업데이트
+        function updateTimeDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timeDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        // 게임 종료 함수 (규격 지침)
+        function gameOver(finalScore) {
+            isPlaying = false;
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            if (timerInterval) clearInterval(timerInterval);
+
+            overlayTitle.textContent = '게임 종료!';
+            overlayDesc.innerHTML = `최종 점수: <b style="font-size:28px; color:#eab308;">${finalScore}점</b><br>수고하셨습니다! 다시 도전해보세요.`;
+            startBtn.textContent = '다시 하기';
+            overlay.classList.remove('hidden');
+        }
+
+        function endGame() {
+            gameOver(score);
+        }
+
+        startBtn.addEventListener('click', startGame);
+
+        // 초기 화면 렌더링
+        draw();
+    </script>
+</body>
+</html>
