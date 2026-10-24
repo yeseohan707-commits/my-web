@@ -254,20 +254,20 @@
         let isPlaying = false;
         let score = 0;
         let timeLeft = TOTAL_TIME;
-        let gameSpeed = 0.0028; // 속도를 느리게 유지
+        let gameSpeed = 0.0050; // 속도를 상향 조정하여 한층 빠르게 진행
         let frameCount = 0;
         let animationFrameId = null;
         let timerInterval = null;
 
-        // 플레이어 상태 (중력을 대폭 낮추고 점프력을 높여 체공 시간을 훨씬 길게 조정)
+        // 플레이어 상태 (중력을 높이고 점프력을 낮추어 점프 체공시간과 높이를 낮춤)
         const player = {
             lane: 0, // -1: 왼쪽, 0: 중앙, 1: 오른쪽
             targetLane: 0,
             laneX: 0,
             jumpY: 0,
             vy: 0,
-            gravity: 0.35, // 중력을 더 낮추어 풍선처럼 여유 있게 부유
-            jumpPower: -15.0, // 점프 높이를 기존보다 대폭 상승시켜 낮은 장애물을 완벽히 넘도록 조정
+            gravity: 0.85, // 중력을 높여 빠른 착지
+            jumpPower: -11.5, // 점프 높이와 체공시간을 낮춤
             isGrounded: true,
             isRolling: false,
             rollKeyDown: false
@@ -528,7 +528,7 @@
                 ctx.stroke();
             }
 
-            // 3. 별사탕 & 장애물 렌더링 (장애물 크기 대폭 확대 적용)
+            // 3. 별사탕 & 장애물 렌더링
             const allEntities = [];
 
             coins.forEach(coin => {
@@ -553,7 +553,7 @@
                 const currentX = centerX + (item.obj.lane * laneWidth);
 
                 if (item.type === 'coin') {
-                    // 훨씬 큼직한 별사탕
+                    // 별사탕
                     ctx.save();
                     ctx.translate(currentX, currentY - (35 * scale));
                     ctx.fillStyle = '#facc15';
@@ -566,7 +566,7 @@
                     ctx.stroke();
                     ctx.restore();
                 } else {
-                    // 대폭 커진 대형 장애물 (기존 크기보다 1.6~2배 확대)
+                    // 대형 장애물
                     const obs = item.obj;
                     ctx.save();
                     ctx.translate(currentX, currentY);
@@ -608,10 +608,10 @@
             const playerRoadWidth = roadTopWidth + (roadBottomWidth - roadTopWidth) * playerScale;
             const playerLaneWidth = playerRoadWidth / 3;
             const playerX = centerX + (player.laneX * playerLaneWidth);
-            // jumpY에 시각적 가중치를 주어 점프 시 화면 위쪽으로 높게 솟구치도록 표현
+            // jumpY 점프 표현식 조정
             const playerY = playerBaseY - (player.jumpY * 1.8);
 
-            const runBounce = (player.isGrounded && !player.isRolling) ? Math.sin(frameCount * 0.3) * 6 : 0;
+            const runBounce = (player.isGrounded && !player.isRolling) ? Math.sin(frameCount * 0.4) * 6 : 0;
 
             drawHachiware(playerX, playerY, playerScale * 2.2, player.isGrounded, player.isRolling, runBounce);
 
@@ -653,16 +653,16 @@
             score += 1;
             scoreDisplay.textContent = score;
 
-            // 속도 유지
-            gameSpeed = 0.0028 + (score * 0.0000012);
+            // 게임 진행에 따른 점진적 속도 증가
+            gameSpeed = 0.0050 + (score * 0.0000018);
 
             // 플레이어 X 레인 보정
-            player.laneX += (player.targetLane - player.laneX) * 0.22;
+            player.laneX += (player.targetLane - player.laneX) * 0.25;
 
             // 구르기/숙이기 누름 유지 업데이트
             player.isRolling = player.rollKeyDown && player.isGrounded;
 
-            // 체공 시간이 길어진 Jump 처리
+            // 빠른 점프 처리
             if (!player.isGrounded) {
                 player.jumpY -= player.vy;
                 player.vy += player.gravity; // 중력 적용
@@ -693,20 +693,20 @@
                 }
             }
 
-            // 장애물 업데이트 및 충돌 판정 (높아진 장애물과 넓어진 점프 높이 반사)
+            // 장애물 업데이트 및 충돌 판정
             for (let i = obstacles.length - 1; i >= 0; i--) {
                 const obs = obstacles[i];
                 obs.z += gameSpeed;
 
                 // 충돌 판정 범위
-                if (Math.abs(obs.z - 0.86) < 0.05 && obs.lane === Math.round(player.laneX)) {
+                if (Math.abs(obs.z - 0.86) < 0.055 && obs.lane === Math.round(player.laneX)) {
                     let hit = false;
 
-                    // 점프 높이(jumpY)가 25 이상이면 낮은 장애물 완벽 통과!
-                    if (obs.type === 'low' && player.jumpY < 25) {
-                        hit = true; // 일정 높이 이상 점프하지 않았을 때만 부딪힘
+                    // 낮아진 점프 높이에 맞게 판정 수치 조정 (jumpY가 14 이상이면 낮은 장애물 통과)
+                    if (obs.type === 'low' && player.jumpY < 14) {
+                        hit = true;
                     } else if (obs.type === 'high' && !player.isRolling) {
-                        hit = true; // 숙이지 않으면 부딪힘
+                        hit = true;
                     }
 
                     if (hit) {
@@ -728,7 +728,7 @@
         function startGame() {
             score = 0;
             timeLeft = TOTAL_TIME;
-            gameSpeed = 0.0028;
+            gameSpeed = 0.0050;
             frameCount = 0;
             obstacles = [];
             coins = [];
@@ -762,97 +762,4 @@
 
             animationFrameId = requestAnimationFrame(update);
         }
-
-        function updateTimeDisplay() {
-            const min = String(Math.floor(timeLeft / 60)).padStart(2, '0');
-            const sec = String(timeLeft % 60).padStart(2, '0');
-            timeDisplay.textContent = `${min}:${sec}`;
-        }
-
-        // 게임 종료 및 gameOver(점수) 규격 호출
-        function endGame() {
-            isPlaying = false;
-            if (animationFrameId) cancelAnimationFrame(animationFrameId);
-            if (timerInterval) clearInterval(timerInterval);
-
-            gameOver(score);
-        }
-
-        function gameOver(finalScore) {
-            overlayTitle.textContent = '게임 종료!';
-            overlayDesc.innerHTML = `하치와레의 최종 점수<br><b style="font-size:28px; color:#4ba3e3;">${finalScore}점</b>`;
-            startBtn.textContent = '다시 하기';
-            overlay.classList.remove('hidden');
-        }
-
-        // 키보드 이벤트
-        window.addEventListener('keydown', (e) => {
-            if (!isPlaying) return;
-
-            switch (e.code) {
-                case 'Space':
-                case 'ArrowUp':
-                    e.preventDefault();
-                    doJump();
-                    break;
-                case 'ArrowDown':
-                    e.preventDefault();
-                    setRollState(true);
-                    break;
-                case 'ArrowLeft':
-                    e.preventDefault();
-                    moveLeft();
-                    break;
-                case 'ArrowRight':
-                    e.preventDefault();
-                    moveRight();
-                    break;
-            }
-        });
-
-        window.addEventListener('keyup', (e) => {
-            if (e.code === 'ArrowDown') {
-                setRollState(false);
-            }
-        });
-
-        // 하단 컨트롤 버튼 이벤트
-        btnLeft.addEventListener('pointerdown', (e) => { e.preventDefault(); moveLeft(); });
-        btnRight.addEventListener('pointerdown', (e) => { e.preventDefault(); moveRight(); });
-        btnJump.addEventListener('pointerdown', (e) => { e.preventDefault(); doJump(); });
-        
-        btnDuck.addEventListener('pointerdown', (e) => { e.preventDefault(); setRollState(true); });
-        btnDuck.addEventListener('pointerup', (e) => { e.preventDefault(); setRollState(false); });
-        btnDuck.addEventListener('pointerleave', (e) => { e.preventDefault(); setRollState(false); });
-
-        // 터치 제어
-        let touchStartX = 0;
-        let touchStartY = 0;
-
-        canvas.addEventListener('touchstart', (e) => {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        }, { passive: true });
-
-        canvas.addEventListener('touchend', (e) => {
-            if (!isPlaying) return;
-            const touchEndX = e.changedTouches[0].clientX;
-            const touchEndY = e.changedTouches[0].clientY;
-
-            const dx = touchEndX - touchStartX;
-            const dy = touchEndY - touchStartY;
-
-            if (Math.abs(dx) > Math.abs(dy)) {
-                if (dx > 30) moveRight();
-                else if (dx < -30) moveLeft();
-            } else {
-                if (dy < -30) doJump();
-            }
-        }, { passive: true });
-
-        startBtn.addEventListener('click', startGame);
-
-        draw();
-    </script>
-</body>
-</html>
+<!-- ... existing code -->
